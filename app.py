@@ -166,6 +166,7 @@ with st.sidebar:
 m_system = m_fahrer + m_rad
 
 uploaded_file = st.file_uploader("Upload FIT File", type=["fit"])
+st.caption("🔒 **Data: Data is only stored temprarily and will be deleted after closing the window.")
 
 if uploaded_file is not None:
     with st.spinner("Parsing FIT file..."):
@@ -209,10 +210,37 @@ if uploaded_file is not None:
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # --- Save & Export Section ---
+        # --- Save & Export Section (Mobile Friendly) ---
         st.markdown("---")
         st.header("💾 Save & Export Results")
         
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            run_name = st.text
+        # Eingabe und Button untereinander statt nebeneinander in Spalten
+        run_name = st.text_input("Name this run / setup", value="", placeholder="z. B. Setup A - Run 1")
+        
+        if st.button("💾 Save Current CdA", use_container_width=True):
+            new_row = pd.DataFrame([{
+                'Setup / Run Name': run_name if run_name else f"Run {len(st.session_state.results_df) + 1}",
+                'CdA': round(cda_slider, 4),
+                'Crr': crr,
+                'Weight (kg)': m_system,
+                'Air Density': round(rho, 3),
+                'Efficiency': eta,
+                'Wind (km/h)': v_wind_kmh
+            }])
+            st.session_state.results_df = pd.concat([st.session_state.results_df, new_row], ignore_index=True)
+            st.success("Ergebnis gespeichert!")
+
+        # Tabelle und Download immer anzeigen
+        if not st.session_state.results_df.empty:
+            st.dataframe(st.session_state.results_df, use_container_width=True)
+            
+            csv = st.session_state.results_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Results as CSV",
+                data=csv,
+                file_name='cda_test_results.csv',
+                mime='text/csv',
+                use_container_width=True
+            )
+        else:
+            st.caption("Click 'Save Current CdA', to add this calculation to the table")
